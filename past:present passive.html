@@ -1,0 +1,529 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ну, погоди! — Лови яйца</title>
+
+<style>
+body {
+  margin: 0;
+  background: #f9f6f0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+
+.game-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('https://i.postimg.cc/xjWMj3LW/Whisk-3056c696bf17cd897e949a9ecb3f44d5eg.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  z-index: -1;
+}
+
+#score {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+#misses {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #c62828;
+}
+
+#chicks {
+  position: fixed;
+  top: calc(7.5 * 37.8px - 5 * 37.8px + 3 * 37.8px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 28px;
+  display: flex;
+  gap: 40px;
+}
+
+.egg {
+  position: absolute;
+  font-size: 36px;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  user-select: none;
+}
+
+#gameover {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-size: 40px;
+  z-index: 1000;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#gameover button {
+  padding: 15px 30px;
+  font-size: 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+#gameover button:hover {
+  background: #45a049;
+}
+
+#catcher {
+  position: fixed;
+  height: calc(5 * 37.8px);
+  width: auto;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  pointer-events: none;
+}
+
+#grammar-dialog {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+  z-index: 2000;
+}
+
+.grammar-box {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.grammar-box h2 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 24px;
+}
+
+.grammar-box .sentence {
+  background: #f0f0f0;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #555;
+}
+
+.grammar-box .instruction {
+  color: #666;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.grammar-box input {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+.grammar-box input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.grammar-box .buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.grammar-box button {
+  padding: 12px 25px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.grammar-box .check-btn {
+  background: #4CAF50;
+  color: white;
+}
+
+.grammar-box .check-btn:hover {
+  background: #45a049;
+}
+
+.grammar-box .skip-btn {
+  background: #ff9800;
+  color: white;
+}
+
+.grammar-box .skip-btn:hover {
+  background: #f57c00;
+}
+
+.grammar-box .feedback {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 16px;
+  display: none;
+}
+
+.grammar-box .feedback.correct {
+  background: #e8f5e9;
+  color: #2e7d32;
+  display: block;
+}
+
+.grammar-box .feedback.wrong {
+  background: #ffebee;
+  color: #c62828;
+  display: block;
+}
+
+.grammar-box .answer {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #333;
+}
+</style>
+</head>
+
+<body>
+<div class="game-bg"></div>
+<div id="score">Счёт: 0</div>
+<div id="misses">Пропущено: 0/5</div>
+<div id="chicks"></div>
+<div id="gameover">
+  <div id="gameover-text"></div>
+  <button onclick="restartGame()">🔄 Начать заново</button>
+</div>
+<img id="catcher" src="https://i.postimg.cc/CLqtd7XR/acetone-20251229-13425-359.png" />
+
+<div id="grammar-dialog">
+  <div class="grammar-box">
+    <h2>📝 Transform to Passive Voice</h2>
+    <div class="sentence" id="active-sentence"></div>
+    <div class="instruction">Write the sentence in Passive Voice:</div>
+    <input type="text" id="passive-input" placeholder="Type your answer here..." />
+    <div class="buttons">
+      <button class="skip-btn" onclick="skipQuestion()">Skip</button>
+      <button class="check-btn" onclick="checkAnswer()">Check</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="answer" id="correct-answer"></div>
+  </div>
+</div>
+
+<script>
+let score = 0;
+let misses = 0;
+let currentEgg = null;
+let gameActive = true;
+let grammarPaused = false;
+let currentQuestion = null;
+
+const scoreEl = document.getElementById('score');
+const missesEl = document.getElementById('misses');
+const gameOverEl = document.getElementById('gameover');
+const gameoverTextEl = document.getElementById('gameover-text');
+const catcherEl = document.getElementById('catcher');
+const grammarDialog = document.getElementById('grammar-dialog');
+const activeSentenceEl = document.getElementById('active-sentence');
+const passiveInput = document.getElementById('passive-input');
+const feedbackEl = document.getElementById('feedback');
+const correctAnswerEl = document.getElementById('correct-answer');
+
+const IMG_WIDTH = 1000;
+const IMG_HEIGHT = 600;
+const CM = 37.8;
+const CHICKENS = [
+  { x: 140, y: 100 },
+  { x: 860, y: 100 }
+];
+
+const PRESENT_SIMPLE = [
+  { active: "People speak English in this shop.", passive: "English is spoken in this shop." },
+  { active: "My mother cooks dinner every night.", passive: "Dinner is cooked by my mother every night." },
+  { active: "They clean the classroom every day.", passive: "The classroom is cleaned every day." },
+  { active: "The gardener waters the flowers in the morning.", passive: "The flowers are watered by the gardener in the morning." },
+  { active: "Someone steals the newspapers from the door.", passive: "The newspapers are stolen from the door." },
+  { active: "We do not sell tickets here.", passive: "Tickets are not sold here." },
+  { active: "Does the postman deliver the mail?", passive: "Is the mail delivered by the postman?" },
+  { active: "People make these cars in Germany.", passive: "These cars are made in Germany." },
+  { active: "She washes the dog on Saturdays.", passive: "The dog is washed on Saturdays." },
+  { active: "They do not watch TV in this house.", passive: "TV is not watched in this house." }
+];
+
+const PAST_SIMPLE = [
+  { active: "Shakespeare wrote Romeo and Juliet.", passive: "Romeo and Juliet was written by Shakespeare." },
+  { active: "Someone broke the window yesterday.", passive: "The window was broken yesterday." },
+  { active: "They built this house in 1995.", passive: "This house was built in 1995." },
+  { active: "The teacher corrected the tests last night.", passive: "The tests were corrected by the teacher last night." },
+  { active: "My friend invited me to the party.", passive: "I was invited to the party by my friend." },
+  { active: "Alexander Graham Bell invented the telephone.", passive: "The telephone was invented by Alexander Graham Bell." },
+  { active: "They sold the old car last week.", passive: "The old car was sold last week." },
+  { active: "The storm damaged the roof.", passive: "The roof was damaged by the storm." },
+  { active: "Did someone eat the last cookie?", passive: "Was the last cookie eaten?" },
+  { active: "We did not finish the project on time.", passive: "The project was not finished on time." }
+];
+
+let topChicksCount = 0;
+let usedQuestions = [];
+
+function getChickenCoords() {
+  const bg = document.querySelector('.game-bg').getBoundingClientRect();
+  const scale = Math.min(bg.width / IMG_WIDTH, bg.height / IMG_HEIGHT);
+  const cx = bg.left + bg.width / 2;
+  const cy = bg.top + bg.height / 2;
+
+  return CHICKENS.map(p => {
+    const dir = p.x < IMG_WIDTH / 2 ? 1 : -1;
+    const shiftedX = p.x + dir * 5 * CM;
+    return {
+      x: cx + (shiftedX - IMG_WIDTH / 2) * scale,
+      y: cy + ((p.y + 2 * CM) - IMG_HEIGHT / 2) * scale
+    };
+  });
+}
+
+function getTarget() {
+  return {
+    x: window.innerWidth / 2,
+    y: window.innerHeight / 2
+  };
+}
+
+function getRandomQuestion() {
+  const allQuestions = [...PRESENT_SIMPLE, ...PAST_SIMPLE];
+  const available = allQuestions.filter((q, i) => !usedQuestions.includes(i));
+  
+  if (available.length === 0) {
+    usedQuestions = [];
+    return allQuestions[Math.floor(Math.random() * allQuestions.length)];
+  }
+  
+  const randomIdx = Math.floor(Math.random() * available.length);
+  const originalIdx = allQuestions.indexOf(available[randomIdx]);
+  usedQuestions.push(originalIdx);
+  
+  return available[randomIdx];
+}
+
+function showGrammarDialog() {
+  grammarPaused = true;
+  currentQuestion = getRandomQuestion();
+  activeSentenceEl.textContent = currentQuestion.active;
+  passiveInput.value = '';
+  feedbackEl.className = 'feedback';
+  feedbackEl.textContent = '';
+  correctAnswerEl.textContent = '';
+  grammarDialog.style.display = 'flex';
+  passiveInput.focus();
+}
+
+function hideGrammarDialog() {
+  grammarDialog.style.display = 'none';
+  grammarPaused = false;
+  passiveInput.value = '';
+}
+
+function checkAnswer() {
+  const userAnswer = passiveInput.value.trim().toLowerCase();
+  const correctAnswer = currentQuestion.passive.toLowerCase();
+  
+  if (userAnswer === correctAnswer) {
+    feedbackEl.className = 'feedback correct';
+    feedbackEl.textContent = '✅ Correct! Well done!';
+    correctAnswerEl.textContent = '';
+    setTimeout(() => {
+      hideGrammarDialog();
+      nextEgg();
+    }, 1500);
+  } else {
+    feedbackEl.className = 'feedback wrong';
+    feedbackEl.textContent = '❌ Not quite right. Try again!';
+    correctAnswerEl.textContent = 'Correct answer: ' + currentQuestion.passive;
+  }
+}
+
+function skipQuestion() {
+  feedbackEl.className = 'feedback wrong';
+  feedbackEl.textContent = '⚠️ Skipped. Here is the correct answer:';
+  correctAnswerEl.textContent = currentQuestion.passive;
+  setTimeout(() => {
+    hideGrammarDialog();
+    nextEgg();
+  }, 2000);
+}
+
+passiveInput.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    checkAnswer();
+  }
+});
+
+function restartGame() {
+  score = 0;
+  misses = 0;
+  topChicksCount = 0;
+  usedQuestions = [];
+  gameActive = true;
+  grammarPaused = false;
+  
+  scoreEl.textContent = 'Счёт: 0';
+  missesEl.textContent = 'Пропущено: 0/5';
+  gameOverEl.style.display = 'none';
+  
+  const chicksContainer = document.getElementById('chicks');
+  chicksContainer.innerHTML = '';
+  
+  document.querySelectorAll('.egg').forEach(e => e.remove());
+  
+  currentEgg = null;
+  nextEgg();
+}
+
+class Egg {
+  constructor() {
+    this.el = document.createElement('div');
+    this.el.className = 'egg';
+    this.el.textContent = '🥚';
+    document.body.appendChild(this.el);
+
+    const points = getChickenCoords();
+    const start = points[Math.floor(Math.random() * points.length)];
+    this.x = start.x;
+    this.y = start.y;
+
+    const t = getTarget();
+    this.tx = t.x;
+    this.ty = t.y;
+
+    this.active = true;
+    this.el.onclick = () => this.catch();
+  }
+
+  update() {
+    if (!this.active || grammarPaused || !gameActive) return;
+    this.x += (this.tx - this.x) * 0.02;
+    this.y += (this.ty - this.y) * 0.02;
+
+    this.el.style.left = this.x + 'px';
+    this.el.style.top = this.y + 'px';
+
+    if (Math.abs(this.x - this.tx) < 15 && Math.abs(this.y - this.ty) < 15) {
+      this.miss();
+    }
+  }
+
+  catch() {
+    if (!this.active || grammarPaused || !gameActive) return;
+    this.active = false;
+    this.el.remove();
+
+    score++;
+    scoreEl.textContent = `Счёт: ${score}`;
+
+    if (score >= 15) {
+      gameActive = false;
+      gameoverTextEl.textContent = '🎉🎊 YOU WIN 🎉🎊';
+      gameOverEl.style.display = 'flex';
+      return;
+    }
+
+    showGrammarDialog();
+  }
+
+  miss() {
+    if (!this.active || grammarPaused || !gameActive) return;
+    this.active = false;
+
+    const missX = this.x;
+    const missY = this.y;
+    this.el.remove();
+
+    const tempChick = document.createElement('div');
+    tempChick.textContent = '🐣';
+    tempChick.style.position = 'absolute';
+    tempChick.style.left = missX + 'px';
+    tempChick.style.top = (missY + 3 * CM) + 'px';
+    tempChick.style.transform = 'translate(-50%, -50%)';
+    tempChick.style.fontSize = '36px';
+    document.body.appendChild(tempChick);
+    setTimeout(() => tempChick.remove(), 1000);
+
+    if (topChicksCount < 5) {
+      const topChick = document.createElement('div');
+      topChick.textContent = '🐣';
+      topChick.style.position = 'fixed';
+      topChick.style.top = `calc(${7.5 * CM - 5 * CM + 3 * CM}px)`;
+      topChick.style.left = `calc(50% + ${(topChicksCount - 2) * 40}px)`;
+      topChick.style.fontSize = '32px';
+      document.body.appendChild(topChick);
+      topChicksCount++;
+    }
+
+    misses++;
+    missesEl.textContent = `Пропущено: ${misses}/5`;
+
+    if (misses >= 5) {
+      gameActive = false;
+      gameoverTextEl.textContent = '🐣 TRY AGAIN 🐣';
+      gameOverEl.style.display = 'flex';
+      return;
+    }
+
+    // FIX: Reset currentEgg before spawning new one
+    currentEgg = null;
+    nextEgg();
+  }
+}
+
+function nextEgg() {
+  if (!gameActive || grammarPaused) return;
+  if (currentEgg && currentEgg.active) return;
+  currentEgg = new Egg();
+}
+
+function loop() {
+  if (gameActive && !grammarPaused && currentEgg) {
+    currentEgg.update();
+  }
+  requestAnimationFrame(loop);
+}
+
+nextEgg();
+loop();
+
+document.addEventListener('mousemove', e => {
+  catcherEl.style.left = e.clientX + 'px';
+  catcherEl.style.top = e.clientY + 'px';
+});
+</script>
+</body>
+</html>
+```
